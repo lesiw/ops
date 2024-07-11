@@ -4,5 +4,7 @@ golang.org/x/sync v0.7.0 h1:YsImfSBoP9QPYL0xyKJPq0gcaJdG3rInoqxTWbfQu9M=
 golang.org/x/sync v0.7.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=
 gotest.tools/v3 v3.5.1 h1:EENdUnS3pdur5nybKYIh2Vfgc8IUNBjxDPSjtiJcOzU=
 gotest.tools/v3 v3.5.1/go.mod h1:isy3WKz7GK6uNw/sbHzfKBLvlvXwUyV06n6brMxxopU=
+lesiw.io/cmdio v0.0.0-20240711224941-6f9e360f0c96 h1:ZMVL8eKhjZUkPHefZVU2wO4GoajjpDLq9jDYcwIcOFI=
+lesiw.io/cmdio v0.0.0-20240711224941-6f9e360f0c96/go.mod h1:1QvHpQzUItUIaITiA5aQAdZEvaNXn5c98EOaRxVsfXs=
 lesiw.io/flag v0.7.0 h1:+8rTdoplDMBhOSKok5eKP6ZuLLPTodkDABRY7jfX5JU=
 lesiw.io/flag v0.7.0/go.mod h1:bJx6Hir8MAXkNiO6BbrvhwZuaJF4rQWthQ7pc1DlWZY=

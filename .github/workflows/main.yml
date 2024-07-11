@@ -1,0 +1,10 @@
+name: main
+on: [push]
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+      - name: ci
+        run: '"$(wget -O- lesiw.io/ci | sh)"'

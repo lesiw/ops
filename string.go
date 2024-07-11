@@ -1,18 +1,9 @@
 package ci
 
 import (
-	"fmt"
 	"strings"
 	"unicode"
 )
-
-func stringify(in []any) []string {
-	out := make([]string, len(in))
-	for i := range in {
-		out[i] = fmt.Sprint(in[i])
-	}
-	return out
-}
 
 func snakecase(s string) string {
 	var result strings.Builder
