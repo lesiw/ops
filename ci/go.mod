@@ -5,8 +5,8 @@ go 1.22.5
 replace lesiw.io/ci => ../
 
 require (
-	lesiw.io/ci v0.0.0-00010101000000-000000000000
-	lesiw.io/cmdio v0.0.0-20240714203209-bedbe3a7fec2
+	lesiw.io/ci v0.1.0
+	lesiw.io/cmdio v0.0.0-20240715220633-ca680d09c1d4
 )
 
 require (

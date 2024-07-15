@@ -78,11 +78,11 @@ func (a actions) Lint() {
 }
 
 func ensureGolangci() {
-	if cmd.MustCheck("which", "golangci-lint").Ok {
+	if _, err := cmd.Get("which", "golangci-lint"); err == nil {
 		return
 	}
 	gopath := cmd.MustGet("go", "env", "GOPATH")
-	cmdio.MustRunPipe(
+	cmdio.MustPipe(
 		cmd.Command("curl", "-sSfL",
 			"https://raw.githubusercontent.com/golangci"+
 				"/golangci-lint/master/install.sh"),
@@ -96,7 +96,7 @@ func (a actions) Test() {
 }
 
 func ensureGoTestSum() {
-	if cmd.MustCheck("which", "gotestsum").Ok {
+	if _, err := cmd.Get("which", "gotestsum"); err == nil {
 		return
 	}
 	cmd.MustRun("go", "install", "gotest.tools/gotestsum@latest")
@@ -104,7 +104,6 @@ func ensureGoTestSum() {
 
 func (a actions) Race() {
 	cmd.MustRun("go", "build", "-race", "-o", "/dev/null")
-
 }
 
 func (a actions) Bump() {
