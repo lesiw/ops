@@ -85,3 +85,21 @@ func (a actions) Race() {
 	cmd.MustRun("go", "build", "-race", "-o", "/dev/null")
 
 }
+
+func (a actions) Bump() {
+	versionfile := "cmd/ci/version.txt"
+	bump := cmdio.MustGetPipe(
+		cmd.Command("curl", "lesiw.io/bump"),
+		cmd.Command("sh"),
+	).Output
+	version := cmdio.MustGetPipe(
+		cmd.Command("cat", versionfile),
+		cmd.Command(bump, "-s", "1"),
+		cmd.Command("tee", versionfile),
+	).Output
+	cmd.MustRun("git", "add", versionfile)
+	cmd.MustRun("git", "commit", "-m", version)
+	cmd.MustRun("git", "tag", version)
+	cmd.MustRun("git", "push")
+	cmd.MustRun("git", "push", "--tags")
+}
