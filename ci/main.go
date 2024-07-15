@@ -8,24 +8,32 @@ import (
 	"lesiw.io/cmdio/cmd"
 )
 
-var targets = [][]string{
-	{"linux", "386"},
-	{"linux", "amd64"},
-	{"linux", "arm"},
-	{"linux", "arm64"},
-	{"darwin", "amd64"},
-	{"darwin", "arm64"},
-	{"windows", "386"},
-	{"windows", "arm"},
-	{"windows", "amd64"},
-	{"plan9", "386"},
-	{"plan9", "arm"},
-	{"plan9", "amd64"},
+type target struct {
+	goos   string
+	goarch string
+	unames string
+	unamer string
+}
+
+var targets = []target{
+	{"linux", "386", "linux", "i386"},
+	{"linux", "amd64", "linux", "x86_64"},
+	{"linux", "arm", "linux", "armv7l"},
+	{"linux", "arm64", "linux", "aarch64"},
+	{"darwin", "amd64", "darwin", "x86_64"},
+	{"darwin", "arm64", "darwin", "arm64"},
+	{"windows", "386", "", ""},
+	{"windows", "arm", "", ""},
+	{"windows", "amd64", "", ""},
+	{"plan9", "386", "", ""},
+	{"plan9", "arm", "", ""},
+	{"plan9", "amd64", "", ""},
 }
 
 type actions struct{}
 
 var project = new(actions)
+var name = "ci"
 
 func main() {
 	defer cmdio.Recover(os.Stderr)
@@ -37,16 +45,29 @@ func main() {
 }
 
 func (a actions) Build() {
+	a.Clean()
 	a.Lint()
 	a.Test()
 	a.Race()
-	for _, target := range targets {
-		cmd.Env(map[string]string{
+	for _, t := range targets {
+		box := cmd.Env(map[string]string{
 			"CGO_ENABLED": "0",
-			"GOOS":        target[0],
-			"GOARCH":      target[1],
-		}).MustRun("go", "build", "-o", "/dev/null")
+			"GOOS":        t.goos,
+			"GOARCH":      t.goarch,
+		})
+		box.MustRun("go", "build", "-o", "/dev/null")
+		if t.unames != "" && t.unamer != "" {
+			box.MustRun("go", "build", "-ldflags=-s -w", "-o",
+				"out/"+name+"-"+t.unames+"-"+t.unamer,
+				"./cmd/ci",
+			)
+		}
 	}
+}
+
+func (a actions) Clean() {
+	cmd.MustRun("rm", "-rf", "out")
+	cmd.MustRun("mkdir", "out")
 }
 
 func (a actions) Lint() {
