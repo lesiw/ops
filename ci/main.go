@@ -36,8 +36,10 @@ func main() {
 	ci.ActionHandler(project, args...)
 }
 
-func (a *actions) Build() {
+func (a actions) Build() {
 	a.Lint()
+	a.Test()
+	a.Race()
 	for _, target := range targets {
 		cmd.Env(map[string]string{
 			"CGO_ENABLED": "0",
@@ -47,16 +49,14 @@ func (a *actions) Build() {
 	}
 }
 
-func (a *actions) Lint() {
-	cmd.MustRun("go", "build", "-race", "-o", "/dev/null")
-
-	EnsureGolangci()
+func (a actions) Lint() {
+	ensureGolangci()
 	cmd.MustRun("golangci-lint", "run")
 
 	cmd.MustRun("go", "run", "github.com/bobg/mingo/cmd/mingo@latest", "-check")
 }
 
-func EnsureGolangci() {
+func ensureGolangci() {
 	if cmd.MustCheck("which", "golangci-lint").Ok {
 		return
 	}
@@ -67,4 +67,21 @@ func EnsureGolangci() {
 				"/golangci-lint/master/install.sh"),
 		cmd.Command("sh", "-s", "--", "-b", gopath.Output+"/bin"),
 	)
+}
+
+func (a actions) Test() {
+	ensureGoTestSum()
+	cmd.MustRun("gotestsum", "./...")
+}
+
+func ensureGoTestSum() {
+	if cmd.MustCheck("which", "gotestsum").Ok {
+		return
+	}
+	cmd.MustRun("go", "install", "gotest.tools/gotestsum@latest")
+}
+
+func (a actions) Race() {
+	cmd.MustRun("go", "build", "-race", "-o", "/dev/null")
+
 }
