@@ -9,6 +9,7 @@ import (
 	"os"
 	"reflect"
 
+	"lesiw.io/cmdio"
 	"lesiw.io/flag"
 )
 
@@ -17,8 +18,9 @@ var (
 	list  = flags.Bool("l,list", "list available actions and exit")
 )
 
-func ActionHandler(a any, args ...string) {
-	if err := actionHandler(a, args...); err != nil {
+func Handle(a any) {
+	defer cmdio.Recover(os.Stderr)
+	if err := actionHandler(a, os.Args[1:]...); err != nil {
 		if err.Error() != "" {
 			fmt.Fprintln(os.Stderr, err)
 		}

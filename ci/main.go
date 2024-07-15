@@ -32,16 +32,13 @@ var targets = []target{
 
 type actions struct{}
 
-var project = new(actions)
 var name = "ci"
 
 func main() {
-	defer cmdio.Recover(os.Stderr)
-	args := os.Args[1:]
-	if len(args) == 0 {
-		args = append(args, "build")
+	if len(os.Args) < 2 {
+		os.Args = append(os.Args, "build")
 	}
-	ci.ActionHandler(project, args...)
+	ci.Handle(actions{})
 }
 
 func (a actions) Build() {
