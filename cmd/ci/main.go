@@ -83,8 +83,8 @@ func run() error {
 		WithPadding(base64.NoPadding).EncodeToString(dirid[:]))
 	stat, err := os.Stat(cibin)
 	if os.IsNotExist(err) || stat.ModTime().Before(mtime) {
-		if err := cmd.Run("go", "build", "-o", cibin, "."); err != nil {
-			return fmt.Errorf("go build failed: %w", err)
+		if err := buildBin(cibin); err != nil {
+			return err
 		}
 	}
 
@@ -180,4 +180,14 @@ func newestMtime(dir string) (mtime time.Time, err error) {
 		},
 	)
 	return
+}
+
+func buildBin(path string) error {
+	if err := cmd.Run("go", "mod", "tidy"); err != nil {
+		return fmt.Errorf("'go mod tidy' failed: %w", err)
+	}
+	if err := cmd.Run("go", "build", "-o", path, "."); err != nil {
+		return fmt.Errorf("'go build' failed: %w", err)
+	}
+	return nil
 }
