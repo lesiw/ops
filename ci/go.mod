@@ -6,7 +6,7 @@ replace lesiw.io/ci => ../
 
 require (
 	lesiw.io/ci v0.1.0
-	lesiw.io/cmdio v0.0.0-20240715220633-ca680d09c1d4
+	lesiw.io/cmdio v0.0.0-20240715233411-f494c30e0903
 )
 
 require (
