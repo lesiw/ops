@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"strings"
 
 	"lesiw.io/ci"
 	"lesiw.io/cmdio"
@@ -103,19 +104,31 @@ func (a actions) Race() {
 	cmd.MustRun("go", "build", "-race", "-o", "/dev/null")
 }
 
-func (a actions) Bump() {
+func (a actions) BumpApp() {
 	versionfile := "cmd/ci/version.txt"
 	bump := cmdio.MustGetPipe(
 		cmd.Command("curl", "lesiw.io/bump"),
 		cmd.Command("sh"),
 	).Output
+	curVersion := cmd.MustGet("cat", versionfile).Output
 	version := cmdio.MustGetPipe(
-		cmd.Command("cat", versionfile),
+		strings.NewReader(curVersion),
 		cmd.Command(bump, "-s", "1"),
 		cmd.Command("tee", versionfile),
 	).Output
 	cmd.MustRun("git", "add", versionfile)
 	cmd.MustRun("git", "commit", "-m", version)
+}
+
+func (a actions) BumpLib() {
+	bump := cmdio.MustGetPipe(
+		cmd.Command("curl", "lesiw.io/bump"),
+		cmd.Command("sh"),
+	).Output
+	version := cmdio.MustGetPipe(
+		cmd.Command("git", "describe", "--abbrev=0", "--tags"),
+		cmd.Command(bump, "-s", "1"),
+	).Output
 	cmd.MustRun("git", "tag", version)
 	cmd.MustRun("git", "push")
 	cmd.MustRun("git", "push", "--tags")
