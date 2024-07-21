@@ -6,10 +6,10 @@ package ci
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 
-	"lesiw.io/cmdio"
 	"lesiw.io/flag"
 )
 
@@ -19,7 +19,7 @@ var (
 )
 
 func Handle(a any) {
-	defer cmdio.Recover(os.Stderr)
+	defer handleRecover()
 	if err := actionHandler(a, os.Args[1:]...); err != nil {
 		if err.Error() != "" {
 			fmt.Fprintln(os.Stderr, err)
@@ -51,4 +51,26 @@ func actionHandler(a any, args ...string) error {
 		}
 	}
 	return fmt.Errorf("bad action '%s'", args[0])
+}
+
+type errorPrinter interface {
+	error
+	Print(io.Writer)
+}
+
+func handleRecover() {
+	r := recover()
+	if r == nil {
+		return
+	}
+	err, ok := r.(error)
+	if !ok {
+		panic(r)
+	}
+	var errp errorPrinter
+	if errors.As(err, &errp) {
+		errp.Print(os.Stderr)
+	} else {
+		fmt.Fprintln(os.Stderr, err.Error())
+	}
 }
