@@ -14,7 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"lesiw.io/cmdio"
-	"lesiw.io/cmdio/cmd"
+	"lesiw.io/cmdio/sys"
 	"lesiw.io/defers"
 	"lesiw.io/flag"
 )
@@ -92,7 +92,7 @@ func run() error {
 		return fmt.Errorf("failed to chdir to '%s': %w", workdir, err)
 	}
 
-	if err := cmd.Run(append([]string{cibin}, os.Args[1:]...)...); err != nil {
+	if err := sys.Run(append([]string{cibin}, os.Args[1:]...)...); err != nil {
 		return errors.New("")
 	}
 	return nil
@@ -183,10 +183,10 @@ func newestMtime(dir string) (mtime time.Time, err error) {
 }
 
 func buildBin(path string) error {
-	if err := cmd.Run("go", "mod", "tidy"); err != nil {
+	if err := sys.Run("go", "mod", "tidy"); err != nil {
 		return fmt.Errorf("'go mod tidy' failed: %w", err)
 	}
-	if err := cmd.Run("go", "build", "-o", path, "."); err != nil {
+	if err := sys.Run("go", "build", "-o", path, "."); err != nil {
 		return fmt.Errorf("'go build' failed: %w", err)
 	}
 	return nil

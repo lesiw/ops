@@ -6,7 +6,7 @@ import (
 
 	"lesiw.io/ci"
 	"lesiw.io/cmdio"
-	"lesiw.io/cmdio/cmd"
+	"lesiw.io/cmdio/sys"
 )
 
 type target struct {
@@ -48,7 +48,7 @@ func (a actions) Build() {
 	a.Test()
 	a.Race()
 	for _, t := range targets {
-		box := cmd.Env(map[string]string{
+		box := sys.Env(map[string]string{
 			"CGO_ENABLED": "0",
 			"GOOS":        t.goos,
 			"GOARCH":      t.goarch,
@@ -64,73 +64,73 @@ func (a actions) Build() {
 }
 
 func (a actions) Clean() {
-	cmd.MustRun("rm", "-rf", "out")
-	cmd.MustRun("mkdir", "out")
+	sys.MustRun("rm", "-rf", "out")
+	sys.MustRun("mkdir", "out")
 }
 
 func (a actions) Lint() {
 	ensureGolangci()
-	cmd.MustRun("golangci-lint", "run")
+	sys.MustRun("golangci-lint", "run")
 
-	cmd.MustRun("go", "run", "github.com/bobg/mingo/cmd/mingo@latest", "-check")
+	sys.MustRun("go", "run", "github.com/bobg/mingo/cmd/mingo@latest", "-check")
 }
 
 func ensureGolangci() {
-	if _, err := cmd.Get("which", "golangci-lint"); err == nil {
+	if _, err := sys.Get("which", "golangci-lint"); err == nil {
 		return
 	}
-	gopath := cmd.MustGet("go", "env", "GOPATH")
+	gopath := sys.MustGet("go", "env", "GOPATH")
 	cmdio.MustPipe(
-		cmd.Command("curl", "-sSfL",
+		sys.Command("curl", "-sSfL",
 			"https://raw.githubusercontent.com/golangci"+
 				"/golangci-lint/master/install.sh"),
-		cmd.Command("sh", "-s", "--", "-b", gopath.Output+"/bin"),
+		sys.Command("sh", "-s", "--", "-b", gopath.Output+"/bin"),
 	)
 }
 
 func (a actions) Test() {
 	ensureGoTestSum()
-	cmd.MustRun("gotestsum", "./...")
+	sys.MustRun("gotestsum", "./...")
 }
 
 func ensureGoTestSum() {
-	if _, err := cmd.Get("which", "gotestsum"); err == nil {
+	if _, err := sys.Get("which", "gotestsum"); err == nil {
 		return
 	}
-	cmd.MustRun("go", "install", "gotest.tools/gotestsum@latest")
+	sys.MustRun("go", "install", "gotest.tools/gotestsum@latest")
 }
 
 func (a actions) Race() {
-	cmd.MustRun("go", "build", "-race", "-o", "/dev/null")
+	sys.MustRun("go", "build", "-race", "-o", "/dev/null")
 }
 
 func (a actions) BumpApp() {
 	versionfile := "cmd/ci/version.txt"
 	bump := cmdio.MustGetPipe(
-		cmd.Command("curl", "lesiw.io/bump"),
-		cmd.Command("sh"),
+		sys.Command("curl", "lesiw.io/bump"),
+		sys.Command("sh"),
 	).Output
-	curVersion := cmd.MustGet("cat", versionfile).Output
+	curVersion := sys.MustGet("cat", versionfile).Output
 	version := cmdio.MustGetPipe(
 		strings.NewReader(curVersion),
-		cmd.Command(bump, "-s", "1"),
-		cmd.Command("tee", versionfile),
+		sys.Command(bump, "-s", "1"),
+		sys.Command("tee", versionfile),
 	).Output
-	cmd.MustRun("git", "add", versionfile)
-	cmd.MustRun("git", "commit", "-m", version)
-	cmd.MustRun("git", "push")
+	sys.MustRun("git", "add", versionfile)
+	sys.MustRun("git", "commit", "-m", version)
+	sys.MustRun("git", "push")
 }
 
 func (a actions) BumpLib() {
 	bump := cmdio.MustGetPipe(
-		cmd.Command("curl", "lesiw.io/bump"),
-		cmd.Command("sh"),
+		sys.Command("curl", "lesiw.io/bump"),
+		sys.Command("sh"),
 	).Output
 	version := cmdio.MustGetPipe(
-		cmd.Command("git", "describe", "--abbrev=0", "--tags"),
-		cmd.Command(bump, "-s", "1"),
+		sys.Command("git", "describe", "--abbrev=0", "--tags"),
+		sys.Command(bump, "-s", "1"),
 	).Output
-	cmd.MustRun("git", "tag", version)
-	cmd.MustRun("git", "push")
-	cmd.MustRun("git", "push", "--tags")
+	sys.MustRun("git", "tag", version)
+	sys.MustRun("git", "push")
+	sys.MustRun("git", "push", "--tags")
 }
