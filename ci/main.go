@@ -118,6 +118,7 @@ func (a actions) BumpApp() {
 	).Output
 	cmd.MustRun("git", "add", versionfile)
 	cmd.MustRun("git", "commit", "-m", version)
+	cmd.MustRun("git", "push")
 }
 
 func (a actions) BumpLib() {
