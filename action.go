@@ -28,9 +28,6 @@ func Handle(a any) {
 		}
 		os.Exit(1)
 	}
-	for _, post := range posts {
-		post()
-	}
 }
 
 // PostHandle registers a func() to run after Handle has completed successfully.
@@ -57,6 +54,9 @@ func actionHandler(a any, args ...string) error {
 		method := t.Method(i)
 		if snakecase(method.Name) == args[0] {
 			method.Func.Call([]reflect.Value{reflect.ValueOf(a)})
+			for _, post := range posts {
+				post()
+			}
 			os.Exit(0)
 		}
 	}
