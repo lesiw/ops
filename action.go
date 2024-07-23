@@ -16,6 +16,8 @@ import (
 var (
 	flags = flag.NewSet(os.Stderr, "ci [-l] ACTION")
 	list  = flags.Bool("l,list", "list available actions and exit")
+
+	posts []func()
 )
 
 func Handle(a any) {
@@ -26,6 +28,14 @@ func Handle(a any) {
 		}
 		os.Exit(1)
 	}
+	for _, post := range posts {
+		post()
+	}
+}
+
+// PostHandle registers a func() to run after Handle has completed successfully.
+func PostHandle(post func()) {
+	posts = append([]func(){post}, posts...)
 }
 
 func actionHandler(a any, args ...string) error {
