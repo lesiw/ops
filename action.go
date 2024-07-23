@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"slices"
 
 	"lesiw.io/flag"
 )
@@ -41,26 +42,27 @@ func actionHandler(a any, args ...string) error {
 	}
 	t := reflect.TypeOf(a)
 	if *list {
-		for i := range t.NumMethod() {
-			method := t.Method(i)
-			fmt.Println(snakecase(method.Name))
+		for _, name := range methodNames(t) {
+			fmt.Println(snakecase(name))
 		}
 		return nil
 	}
 	if len(flags.Args) < 1 {
 		return fmt.Errorf("bad action: no action provided")
 	}
-	for i := range t.NumMethod() {
-		method := t.Method(i)
-		if snakecase(method.Name) == args[0] {
-			method.Func.Call([]reflect.Value{reflect.ValueOf(a)})
-			for _, post := range posts {
-				post()
-			}
-			os.Exit(0)
-		}
+	var ran bool
+	for _, method := range methodsByName(t, args[0]) {
+		method.Func.Call([]reflect.Value{reflect.ValueOf(a)})
+		ran = true
 	}
-	return fmt.Errorf("bad action '%s'", args[0])
+	if !ran {
+		return fmt.Errorf("bad action '%s'", args[0])
+	}
+	for _, post := range posts {
+		post()
+	}
+	os.Exit(0)
+	return nil
 }
 
 type errorPrinter interface {
@@ -83,4 +85,49 @@ func handleRecover() {
 	} else {
 		fmt.Fprintln(os.Stderr, err.Error())
 	}
+}
+
+func methodNames(t reflect.Type) (methods []string) {
+	for m := range methodNameSet(t) {
+		methods = append(methods, m)
+	}
+	slices.Sort(methods)
+	return
+}
+
+func methodNameSet(t reflect.Type) (methods map[string]bool) {
+	methods = make(map[string]bool)
+	for i := range t.NumMethod() {
+		method := t.Method(i)
+		methods[method.Name] = true
+	}
+	for i := range t.NumField() {
+		field := t.Field(i)
+		if !field.Anonymous {
+			continue
+		}
+		for name := range methodNameSet(field.Type) {
+			methods[name] = true
+		}
+	}
+	return
+}
+
+func methodsByName(t reflect.Type, name string) (methods []reflect.Method) {
+	for i := range t.NumMethod() {
+		method := t.Method(i)
+		if snakecase(method.Name) == name {
+			methods = append(methods, method)
+		}
+	}
+	if len(methods) == 0 {
+		for i := range t.NumField() {
+			field := t.Field(i)
+			if !field.Anonymous {
+				continue
+			}
+			methods = append(methods, methodsByName(field.Type, name)...)
+		}
+	}
+	return
 }
