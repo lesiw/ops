@@ -112,7 +112,7 @@ func (op Ops) BumpApp() {
 	).Output
 	curVersion := sys.MustGet("cat", versionfile).Output
 	version := cmdio.MustGetPipe(
-		strings.NewReader(curVersion),
+		strings.NewReader(curVersion+"\n"),
 		sys.Command(bump, "-s", "1"),
 		sys.Command("tee", versionfile),
 	).Output
