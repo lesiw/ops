@@ -41,9 +41,9 @@ func installBashComp() error {
 	var path string
 	switch runtime.GOOS {
 	case "darwin":
-		path = "/usr/local/share/bash-completion/completions/ci"
+		path = "/usr/local/share/bash-completion/completions/op"
 	default:
-		path = "/usr/share/bash-completion/completions/ci"
+		path = "/usr/share/bash-completion/completions/op"
 	}
 	changed, err := installFile(bashcomp, path)
 	if err != nil {
@@ -57,7 +57,7 @@ func installBashComp() error {
 
 func installZshComp() error {
 	changed, err := installFile(zshcomp,
-		"/usr/local/share/zsh/site-functions/_ci")
+		"/usr/local/share/zsh/site-functions/_op")
 	if err != nil {
 		return fmt.Errorf("Error installing zsh completion script: %v\n", err)
 	}

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-__ci_completion () {
+__op_completion () {
     case "${COMP_WORDS[COMP_CWORD]}" in
         -*) suggestions="-l"
             ;;
         *)
-            suggestions="$(ci -l)"
+            suggestions="$(op -l)"
             ;;
     esac
     [ -z "$suggestions" ] && return 0
@@ -16,4 +16,4 @@ __ci_completion () {
     done < <(compgen -W "$suggestions" -- "${COMP_WORDS[COMP_CWORD]}")
 }
 
-complete -F __ci_completion ci
+complete -F __op_completion op

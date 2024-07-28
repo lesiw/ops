@@ -1,7 +1,7 @@
 //go:build !tinygo
 // +build !tinygo
 
-package ci
+package ops
 
 import (
 	"errors"
@@ -15,15 +15,15 @@ import (
 )
 
 var (
-	flags = flag.NewSet(os.Stderr, "ci [-l] ACTION")
-	list  = flags.Bool("l,list", "list available actions and exit")
+	flags = flag.NewSet(os.Stderr, "op [-l] OPERATION")
+	list  = flags.Bool("l,list", "list available ops and exit")
 
 	posts []func()
 )
 
 func Handle(a any) {
 	defer handleRecover()
-	if err := actionHandler(a, os.Args[1:]...); err != nil {
+	if err := opHandler(a, os.Args[1:]...); err != nil {
 		if err.Error() != "" {
 			fmt.Fprintln(os.Stderr, err)
 		}
@@ -31,12 +31,12 @@ func Handle(a any) {
 	}
 }
 
-// PostHandle registers a func() to run after Handle has completed successfully.
+// PostHandle registers a func() to run after Handle has run successfully.
 func PostHandle(post func()) {
 	posts = append([]func(){post}, posts...)
 }
 
-func actionHandler(a any, args ...string) error {
+func opHandler(a any, args ...string) error {
 	if err := flags.Parse(args...); err != nil {
 		return errors.New("")
 	}

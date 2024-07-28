@@ -1,4 +1,4 @@
-module lesiw.io/ci
+module lesiw.io/ops
 
 go 1.22.0
 

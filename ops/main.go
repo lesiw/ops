@@ -4,9 +4,9 @@ import (
 	"os"
 	"strings"
 
-	"lesiw.io/ci"
 	"lesiw.io/cmdio"
 	"lesiw.io/cmdio/sys"
+	"lesiw.io/ops"
 )
 
 type target struct {
@@ -31,22 +31,22 @@ var targets = []target{
 	{"plan9", "amd64", "", ""},
 }
 
-type actions struct{}
+type Ops struct{}
 
-var name = "ci"
+var binname = "op"
 
 func main() {
 	if len(os.Args) < 2 {
 		os.Args = append(os.Args, "build")
 	}
-	ci.Handle(actions{})
+	ops.Handle(Ops{})
 }
 
-func (a actions) Build() {
-	a.Clean()
-	a.Lint()
-	a.Test()
-	a.Race()
+func (op Ops) Build() {
+	op.Clean()
+	op.Lint()
+	op.Test()
+	op.Race()
 	for _, t := range targets {
 		box := sys.Env(map[string]string{
 			"CGO_ENABLED": "0",
@@ -56,19 +56,19 @@ func (a actions) Build() {
 		box.MustRun("go", "build", "-o", "/dev/null")
 		if t.unames != "" && t.unamer != "" {
 			box.MustRun("go", "build", "-ldflags=-s -w", "-o",
-				"out/"+name+"-"+t.unames+"-"+t.unamer,
-				"./cmd/ci",
+				"out/"+binname+"-"+t.unames+"-"+t.unamer,
+				"./op",
 			)
 		}
 	}
 }
 
-func (a actions) Clean() {
+func (op Ops) Clean() {
 	sys.MustRun("rm", "-rf", "out")
 	sys.MustRun("mkdir", "out")
 }
 
-func (a actions) Lint() {
+func (op Ops) Lint() {
 	ensureGolangci()
 	sys.MustRun("golangci-lint", "run")
 
@@ -88,7 +88,7 @@ func ensureGolangci() {
 	)
 }
 
-func (a actions) Test() {
+func (op Ops) Test() {
 	ensureGoTestSum()
 	sys.MustRun("gotestsum", "./...")
 }
@@ -100,12 +100,12 @@ func ensureGoTestSum() {
 	sys.MustRun("go", "install", "gotest.tools/gotestsum@latest")
 }
 
-func (a actions) Race() {
+func (op Ops) Race() {
 	sys.MustRun("go", "build", "-race", "-o", "/dev/null")
 }
 
-func (a actions) BumpApp() {
-	versionfile := "cmd/ci/version.txt"
+func (op Ops) BumpApp() {
+	versionfile := "op/version.txt"
 	bump := cmdio.MustGetPipe(
 		sys.Command("curl", "lesiw.io/bump"),
 		sys.Command("sh"),
@@ -121,7 +121,7 @@ func (a actions) BumpApp() {
 	sys.MustRun("git", "push")
 }
 
-func (a actions) BumpLib() {
+func (op Ops) BumpLib() {
 	bump := cmdio.MustGetPipe(
 		sys.Command("curl", "lesiw.io/bump"),
 		sys.Command("sh"),

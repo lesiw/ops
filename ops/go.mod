@@ -1,12 +1,12 @@
-module ci
+module ops.local
 
 go 1.22.5
 
-replace lesiw.io/ci => ../
+replace lesiw.io/ops => ../
 
 require (
-	lesiw.io/ci v0.1.0
 	lesiw.io/cmdio v0.0.0-20240721221901-62ec195983db
+	lesiw.io/ops v0.0.0-00010101000000-000000000000
 )
 
 require (

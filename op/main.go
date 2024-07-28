@@ -20,8 +20,8 @@ import (
 )
 
 var (
-	flags    = flag.NewSet(os.Stderr, "ci COMMAND")
-	_        = flags.Bool("l", "list commands")
+	flags    = flag.NewSet(os.Stderr, "op OPERATION")
+	_        = flags.Bool("l", "list ops")
 	install  = flags.Bool("install-completions", "install completion scripts")
 	printver = flags.Bool("V,version", "print version")
 
@@ -60,7 +60,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	if err := toCiDir(workdir); err != nil {
+	if err := toOpsDir(workdir); err != nil {
 		return err
 	}
 
@@ -79,11 +79,11 @@ func run() error {
 		return err
 	}
 
-	cibin := filepath.Join(bindir, "ci-"+base64.URLEncoding.
+	opsbin := filepath.Join(bindir, "ops-"+base64.URLEncoding.
 		WithPadding(base64.NoPadding).EncodeToString(dirid[:]))
-	stat, err := os.Stat(cibin)
+	stat, err := os.Stat(opsbin)
 	if os.IsNotExist(err) || stat.ModTime().Before(mtime) {
-		if err := buildBin(cibin); err != nil {
+		if err := buildBin(opsbin); err != nil {
 			return err
 		}
 	}
@@ -92,7 +92,8 @@ func run() error {
 		return fmt.Errorf("failed to chdir to '%s': %w", workdir, err)
 	}
 
-	if err := sys.Run(append([]string{cibin}, os.Args[1:]...)...); err != nil {
+	err = sys.Run(append([]string{opsbin}, os.Args[1:]...)...)
+	if err != nil {
 		return errors.New("")
 	}
 	return nil
@@ -127,7 +128,7 @@ func cacheDir(path ...string) (cache string, err error) {
 	if cache, err = os.UserCacheDir(); err != nil {
 		return "", fmt.Errorf("failed to get user cache directory: %s", err)
 	}
-	cache = filepath.Join(cache, "ci", filepath.Join(path...))
+	cache = filepath.Join(cache, "ops", filepath.Join(path...))
 	if err = os.MkdirAll(cache, 0755); err != nil {
 		return "", fmt.Errorf("failed to create cache directory: %s", err)
 	}
@@ -151,13 +152,13 @@ func toRootDir() (string, error) {
 	}
 }
 
-func toCiDir(root string) error {
-	if stat, err := os.Stat("ci"); os.IsNotExist(err) || !stat.IsDir() {
-		return fmt.Errorf("no 'ci' directory found: %w", err)
+func toOpsDir(root string) error {
+	if stat, err := os.Stat("ops"); os.IsNotExist(err) || !stat.IsDir() {
+		return fmt.Errorf("no 'ops' directory found: %w", err)
 	}
-	cidir := filepath.Join(root, "ci")
-	if err := os.Chdir(cidir); err != nil {
-		return fmt.Errorf("failed to chdir to '%s': %w", cidir, err)
+	opsdir := filepath.Join(root, "ops")
+	if err := os.Chdir(opsdir); err != nil {
+		return fmt.Errorf("failed to chdir to '%s': %w", opsdir, err)
 	}
 	return nil
 }
