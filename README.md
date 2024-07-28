@@ -8,7 +8,7 @@
 
 ## Use
 
-Ensure the [Go runtime][go] is installed.
+Ensure the [Go toolchain][go] is installed.
 
 Install this example to `ops/main.go` in a git repository.
 
