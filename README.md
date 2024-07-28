@@ -19,13 +19,8 @@ import "lesiw.io/ops"
 
 type Ops struct{}
 
-func main() {
-    ops.Handle(Ops{})
-}
-
-func (op Ops) Hello() {
-    println("Hello world!")
-}
+func main()          { ops.Handle(Ops{}) }
+func (_ Ops) Hello() { println("Hello world!") }
 ```
 
 Then run it.
@@ -36,4 +31,7 @@ op -l                   # => hello
 op hello                # => Hello world!
 ```
 
+You can also play with a basic example on the [Go playground][play].
+
 [go]: https://go.dev/doc/install
+[play]: https://go.dev/play/p/YcUCt5RLoPR
