@@ -19,8 +19,8 @@ import "lesiw.io/ops"
 
 type Ops struct{}
 
-func main()          { ops.Handle(Ops{}) }
-func (_ Ops) Hello() { println("Hello world!") }
+func main()        { ops.Handle(Ops{}) }
+func (Ops) Hello() { println("Hello world!") }
 ```
 
 Then run it.
