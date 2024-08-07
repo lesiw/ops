@@ -141,13 +141,15 @@ func toRootDir() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		fileinfo, err := os.Stat(".git")
-		if err == nil && fileinfo.IsDir() {
-			return cwd, nil
+		for _, dir := range []string{".git", "ops"} {
+			fileinfo, err := os.Stat(dir)
+			if err == nil && fileinfo.IsDir() {
+				return cwd, nil
+			}
 		}
 		reachedRoot := (cwd == "/" || cwd == (filepath.VolumeName(cwd)+"\\"))
 		if reachedRoot || os.Chdir("..") != nil {
-			return "", fmt.Errorf("No .git directory was found.")
+			return "", fmt.Errorf("No .git or ops directory was found.")
 		}
 	}
 }
