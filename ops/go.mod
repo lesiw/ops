@@ -1,15 +1,15 @@
-module ops.local
+module ops.localhost
 
 go 1.22.5
 
-replace lesiw.io/ops => ../
-
 require (
-	lesiw.io/cmdio v0.0.0-20240721221901-62ec195983db
-	lesiw.io/ops v0.0.0-00010101000000-000000000000
+	labs.lesiw.io/ops v0.0.0-20240731232932-5ff945d75e21
+	lesiw.io/ops v0.7.0
 )
 
 require (
 	golang.org/x/sync v0.7.0 // indirect
+	lesiw.io/clerk v0.1.0 // indirect
+	lesiw.io/cmdio v0.0.0-20240723224912-c34a917524ae // indirect
 	lesiw.io/flag v0.7.0 // indirect
 )
