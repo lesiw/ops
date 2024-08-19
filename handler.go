@@ -122,6 +122,9 @@ func methodNameSet(t reflect.Type) (methods map[string]bool) {
 		method := ptr.Method(i)
 		methods[method.Name] = true
 	}
+	if t.Kind() != reflect.Struct {
+		return
+	}
 	for i := range t.NumField() {
 		field := t.Field(i)
 		if !field.Anonymous {
@@ -148,7 +151,7 @@ func methodsByName(t reflect.Type, name string) (methods []reflect.Method) {
 			methods = append(methods, method)
 		}
 	}
-	if len(methods) == 0 {
+	if len(methods) == 0 && t.Kind() == reflect.Struct {
 		for i := range t.NumField() {
 			field := t.Field(i)
 			if !field.Anonymous {

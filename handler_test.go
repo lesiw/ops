@@ -33,6 +33,7 @@ type S8 struct {
 	ptrFnCalled bool
 }
 type S9 struct{}
+type B1 bool
 
 func (S1) F1() {}
 func (S2) F2() {}
@@ -45,6 +46,7 @@ func (s *S8) PtrFn() {
 func (S9) NonPtrFn() {
 	NonPtrFnCalled = true
 }
+func (B1) F1() {}
 
 func TestMethodsByName(t *testing.T) {
 	tests := []struct {
@@ -83,6 +85,14 @@ func TestMethodsByName(t *testing.T) {
 		reflect.TypeOf(S8{}),
 		"ptr_fn",
 		[]string{"S8.PtrFn"},
+	}, {
+		reflect.TypeOf(B1(true)),
+		"f1",
+		[]string{"B1.F1"},
+	}, {
+		reflect.TypeOf(new(B1)),
+		"f1",
+		[]string{"B1.F1"},
 	}}
 	for _, tt := range tests {
 		t.Run(strings.Join(tt.want, "/"), func(t *testing.T) {
@@ -125,6 +135,9 @@ func TestMethodNames(t *testing.T) {
 	}, {
 		reflect.TypeOf(S9{}),
 		[]string{"NonPtrFn"},
+	}, {
+		reflect.TypeOf(B1(true)),
+		[]string{"F1"},
 	}}
 	for _, tt := range tests {
 		t.Run(tt.rtype.Name(), func(t *testing.T) {
