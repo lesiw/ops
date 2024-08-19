@@ -176,6 +176,27 @@ func TestCallNonPointerReceiver(t *testing.T) {
 	}
 }
 
+func TestCallNonPointerReceiverWithPointer(t *testing.T) {
+	t.Cleanup(func() { NonPtrFnCalled = false })
+
+	err := opHandler(new(S9), "non_ptr_fn")
+
+	if err != nil {
+		t.Errorf(`opHandler(s, "non_ptr_fn") = %q, want <nil>`, err)
+	}
+	if !NonPtrFnCalled {
+		t.Errorf(`opHandler(s, "non_ptr_fn"): NonPtrFn() not called`)
+	}
+}
+
+func TestCallPointerReceiverWithNonPointer(t *testing.T) {
+	// This test exists to ensure we do not error or panic.
+	// Since we are not operating on a pointer, S8.ptrFnCalled will not update.
+	if err := opHandler(S8{}, "ptr_fn"); err != nil {
+		t.Errorf(`opHandler(s, "ptr_fn") = %q, want <nil>`, err)
+	}
+}
+
 func methodname(m reflect.Method) string {
 	return m.Func.Type().In(0).Elem().Name() + "." + m.Name
 }
