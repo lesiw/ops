@@ -22,12 +22,13 @@ var (
 )
 
 func Handle(a any) {
-	defer handleRecover()
+	var code int
+	defer func() { os.Exit(code) }()
 	if err := opHandler(a, os.Args[1:]...); err != nil {
 		if err.Error() != "" {
 			fmt.Fprintln(os.Stderr, err)
 		}
-		os.Exit(1)
+		code = 1
 	}
 }
 
@@ -37,6 +38,7 @@ func PostHandle(post func()) {
 }
 
 func opHandler(a any, args ...string) error {
+	defer handleRecover()
 	if err := flags.Parse(args...); err != nil {
 		return errors.New("")
 	}
@@ -48,20 +50,32 @@ func opHandler(a any, args ...string) error {
 		return nil
 	}
 	if len(flags.Args) < 1 {
-		return fmt.Errorf("bad action: no action provided")
+		return fmt.Errorf("bad op: no op provided")
 	}
+	val := reflect.ValueOf(a)
 	var ran bool
 	for _, method := range methodsByName(t, args[0]) {
-		method.Func.Call([]reflect.Value{reflect.ValueOf(a)})
+		if method.Func.Type().In(0).Kind() == reflect.Ptr {
+			if val.Kind() == reflect.Ptr {
+				method.Func.Call([]reflect.Value{val})
+			} else {
+				ptr := reflect.New(val.Type())
+				ptr.Elem().Set(val)
+				method.Func.Call([]reflect.Value{ptr})
+			}
+		} else if val.Kind() == reflect.Ptr {
+			method.Func.Call([]reflect.Value{reflect.ValueOf(a).Elem()})
+		} else {
+			method.Func.Call([]reflect.Value{reflect.ValueOf(a)})
+		}
 		ran = true
 	}
 	if !ran {
-		return fmt.Errorf("bad action '%s'", args[0])
+		return fmt.Errorf("bad op '%s'", args[0])
 	}
 	for _, post := range posts {
 		post()
 	}
-	os.Exit(0)
 	return nil
 }
 
@@ -97,8 +111,15 @@ func methodNames(t reflect.Type) (methods []string) {
 
 func methodNameSet(t reflect.Type) (methods map[string]bool) {
 	methods = make(map[string]bool)
-	for i := range t.NumMethod() {
-		method := t.Method(i)
+	var ptr reflect.Type
+	if t.Kind() == reflect.Pointer {
+		ptr = t
+		t = t.Elem()
+	} else {
+		ptr = reflect.PointerTo(t)
+	}
+	for i := range ptr.NumMethod() {
+		method := ptr.Method(i)
 		methods[method.Name] = true
 	}
 	for i := range t.NumField() {
@@ -114,8 +135,15 @@ func methodNameSet(t reflect.Type) (methods map[string]bool) {
 }
 
 func methodsByName(t reflect.Type, name string) (methods []reflect.Method) {
-	for i := range t.NumMethod() {
-		method := t.Method(i)
+	var ptr reflect.Type
+	if t.Kind() == reflect.Pointer {
+		ptr = t
+		t = t.Elem()
+	} else {
+		ptr = reflect.PointerTo(t)
+	}
+	for i := range ptr.NumMethod() {
+		method := ptr.Method(i)
 		if snakecase(method.Name) == name {
 			methods = append(methods, method)
 		}
