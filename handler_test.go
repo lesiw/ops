@@ -1,12 +1,97 @@
 package ops
 
 import (
+	"bytes"
+	"errors"
+	"fmt"
+	"io"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
+
+type TestHandler int
+
+func (o *TestHandler) Incr() { *o++ }
+func (o TestHandler) Fail()  { panic(errors.New("fail")) }
+
+type PrintableError struct{ error }
+
+func (p PrintableError) Print(w io.Writer) {
+	fmt.Fprintln(w, "---")
+	fmt.Fprintln(w, p.Error())
+	fmt.Fprintln(w, "---")
+}
+
+func (o TestHandler) PrintableFail() {
+	panic(PrintableError{errors.New("fail")})
+}
+
+func TestHandleSuccess(t *testing.T) {
+	var code *int
+	swap(t, &exit, func(exitcode int) { code = &exitcode })
+	swap(t, &os.Args, []string{"", "incr"})
+	errbuf := new(bytes.Buffer)
+	swap[io.Writer](t, &stderr, errbuf)
+	counter := new(TestHandler)
+
+	Handle(counter)
+
+	if got, want := int(*counter), 1; got != want {
+		t.Errorf("got %d TestHandler.Incr() calls, want %d", got, want)
+	}
+	if code == nil {
+		t.Errorf("TestHandler fail op: did not call exit()")
+	} else if got, want := *code, 0; got != want {
+		t.Errorf("TestHandler fail op: got exit(%d), want exit(%d)", got, want)
+	}
+	if got, want := errbuf.String(), ""; got != want {
+		t.Errorf("stderr = %q, want %q", got, want)
+	}
+}
+
+func TestHandleFailure(t *testing.T) {
+	var code *int
+	swap(t, &exit, func(exitcode int) { code = &exitcode })
+	swap(t, &os.Args, []string{"", "fail"})
+	errbuf := new(bytes.Buffer)
+	swap[io.Writer](t, &stderr, errbuf)
+	counter := new(TestHandler)
+
+	Handle(counter)
+
+	if code == nil {
+		t.Errorf("TestHandler fail op: did not call exit()")
+	} else if got, want := *code, 1; got != want {
+		t.Errorf("TestHandler fail op: got exit(%d), want exit(%d)", got, want)
+	}
+	if got, want := errbuf.String(), "fail\n"; got != want {
+		t.Errorf("stderr = %q, want %q", got, want)
+	}
+}
+
+func TestHandlePrintable(t *testing.T) {
+	var code *int
+	swap(t, &exit, func(exitcode int) { code = &exitcode })
+	swap(t, &os.Args, []string{"", "printable_fail"})
+	errbuf := new(bytes.Buffer)
+	swap[io.Writer](t, &stderr, errbuf)
+	counter := new(TestHandler)
+
+	Handle(counter)
+
+	if code == nil {
+		t.Errorf("TestHandler fail op: did not call exit()")
+	} else if got, want := *code, 1; got != want {
+		t.Errorf("TestHandler fail op: got exit(%d), want exit(%d)", got, want)
+	}
+	if got, want := errbuf.String(), "---\nfail\n---\n"; got != want {
+		t.Errorf("stderr = %q, want %q", got, want)
+	}
+}
 
 var NonPtrFnCalled bool
 
@@ -199,4 +284,11 @@ func TestCallPointerReceiverWithNonPointer(t *testing.T) {
 
 func methodname(m reflect.Method) string {
 	return m.Func.Type().In(0).Elem().Name() + "." + m.Name
+}
+
+func swap[T any](t *testing.T, orig *T, with T) {
+	t.Helper()
+	o := *orig
+	t.Cleanup(func() { *orig = o })
+	*orig = with
 }

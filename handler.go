@@ -15,18 +15,21 @@ import (
 )
 
 var (
-	flags = flag.NewSet(os.Stderr, "op [-l] OPERATION")
+	exit  = os.Exit
+	flags = flag.NewSet(stderr, "op [-l] OPERATION")
 	list  = flags.Bool("l,list", "list available ops and exit")
 
 	posts []func()
+
+	stderr io.Writer = os.Stderr
 )
 
 func Handle(a any) {
 	var code int
-	defer func() { os.Exit(code) }()
+	defer func() { exit(code) }()
 	if err := opHandler(a, os.Args[1:]...); err != nil {
 		if err.Error() != "" {
-			fmt.Fprintln(os.Stderr, err)
+			fmt.Fprintln(stderr, err)
 		}
 		code = 1
 	}
@@ -37,8 +40,8 @@ func PostHandle(post func()) {
 	posts = append([]func(){post}, posts...)
 }
 
-func opHandler(a any, args ...string) error {
-	defer handleRecover()
+func opHandler(a any, args ...string) (err error) {
+	defer handleRecover(&err)
 	if err := flags.Parse(args...); err != nil {
 		return errors.New("")
 	}
@@ -84,7 +87,7 @@ type errorPrinter interface {
 	Print(io.Writer)
 }
 
-func handleRecover() {
+func handleRecover(ret *error) {
 	r := recover()
 	if r == nil {
 		return
@@ -95,9 +98,12 @@ func handleRecover() {
 	}
 	var errp errorPrinter
 	if errors.As(err, &errp) {
-		errp.Print(os.Stderr)
+		errp.Print(stderr)
 	} else {
-		fmt.Fprintln(os.Stderr, err.Error())
+		fmt.Fprintln(stderr, err.Error())
+	}
+	if ret == nil || *ret == nil {
+		*ret = errors.New("")
 	}
 }
 
