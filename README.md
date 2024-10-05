@@ -4,7 +4,7 @@
 
 Ensure the [Go toolchain][go] is installed.
 
-Install this file to `ops/main.go`.
+Add a file to `.ops/main.go`, for example:
 
 ```go
 package main
@@ -20,12 +20,25 @@ func (Ops) Hello() { println("Hello world!") }
 Then use `op` to run it.
 
 ```shell
-curl lesiw.io/op | sh  # Install op.
-op -l                  # => hello
-op hello               # => Hello world!
+go install lesiw.io/op@latest # Install op.
+op -l                         # => hello
+op hello                      # => Hello world!
 ```
 
 You can also play with a basic example on the [Go playground][play].
+
+## Error handling
+
+Op functions can be of type `func()` or `func() error`. If a `func()` op panics,
+that panic will be printed as if it were an error. If a `func() error` op
+panics, it is treated as a true panic and will print a stacktrace.
+
+## Post handler functions
+
+`ops.Defer(func())` will run `func()` at the end of the program regardless of
+whether an op completes successfully.
+
+`ops.After(func())` will run `func()` after all ops have completed successfully.
 
 ## What's the difference between this and Magefiles?
 

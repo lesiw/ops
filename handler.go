@@ -10,7 +10,9 @@ import (
 	"os"
 	"reflect"
 	"slices"
+	"strings"
 
+	"lesiw.io/defers"
 	"lesiw.io/flag"
 )
 
@@ -19,12 +21,13 @@ var (
 	flags = flag.NewSet(stderr, "op [-l] OPERATION")
 	list  = flags.Bool("l,list", "list available ops and exit")
 
-	posts []func()
+	afters []func()
 
 	stderr io.Writer = os.Stderr
 )
 
 func Handle(a any) {
+	defer defers.Recover()
 	var code int
 	defer func() { exit(code) }()
 	if err := opHandler(a, os.Args[1:]...); err != nil {
@@ -35,13 +38,17 @@ func Handle(a any) {
 	}
 }
 
-// PostHandle registers a func() to run after Handle has run successfully.
-func PostHandle(post func()) {
-	posts = append([]func(){post}, posts...)
+// After registers a func() to run after Handle has run successfully.
+func After(f func()) {
+	afters = append([]func(){f}, afters...)
+}
+
+// Defer registers a func() to run at the end of the program.
+func Defer(f func()) {
+	defers.Add(f)
 }
 
 func opHandler(a any, args ...string) (err error) {
-	defer handleRecover(&err)
 	if err := flags.Parse(args...); err != nil {
 		return errors.New("")
 	}
@@ -55,56 +62,110 @@ func opHandler(a any, args ...string) (err error) {
 	if len(flags.Args) < 1 {
 		return fmt.Errorf("bad op: no op provided")
 	}
+	for _, method := range methods(t) {
+		if err := validate(method); err != nil {
+			return err
+		}
+	}
 	val := reflect.ValueOf(a)
 	var ran bool
 	for _, method := range methodsByName(t, args[0]) {
-		if method.Func.Type().In(0).Kind() == reflect.Ptr {
-			if val.Kind() == reflect.Ptr {
-				method.Func.Call([]reflect.Value{val})
-			} else {
-				ptr := reflect.New(val.Type())
-				ptr.Elem().Set(val)
-				method.Func.Call([]reflect.Value{ptr})
-			}
-		} else if val.Kind() == reflect.Ptr {
-			method.Func.Call([]reflect.Value{reflect.ValueOf(a).Elem()})
-		} else {
-			method.Func.Call([]reflect.Value{reflect.ValueOf(a)})
+		if err := exec(val, method); err != nil {
+			return err
 		}
 		ran = true
 	}
 	if !ran {
 		return fmt.Errorf("bad op '%s'", args[0])
 	}
-	for _, post := range posts {
-		post()
+	for _, after := range afters {
+		after()
 	}
 	return nil
 }
 
-type errorPrinter interface {
-	error
-	Print(io.Writer)
+func validate(fn reflect.Method) error {
+	typ := fn.Type
+	if typ.NumOut() == 0 {
+		return nil
+	}
+	if typ.NumOut() > 1 || typ.Out(0).Name() != "error" {
+		return fmt.Errorf("bad op: bad signature: %s", signature(fn))
+	}
+	return nil
 }
 
-func handleRecover(ret *error) {
-	r := recover()
-	if r == nil {
-		return
+func exec(val reflect.Value, fn reflect.Method) (err error) {
+	var catch bool
+	defer func() {
+		if !catch {
+			return
+		}
+		r := recover()
+		if r == nil {
+			return
+		}
+		switch v := r.(type) {
+		case fmt.Stringer:
+			err = errors.New(v.String())
+		case error:
+			err = errors.New(v.Error())
+		default:
+			err = fmt.Errorf("%v", v)
+		}
+	}()
+
+	typ := fn.Type
+	if typ.NumOut() == 0 {
+		catch = true
 	}
-	err, ok := r.(error)
-	if !ok {
-		panic(r)
-	}
-	var errp errorPrinter
-	if errors.As(err, &errp) {
-		errp.Print(stderr)
+	var ret []reflect.Value
+	if typ.In(0).Kind() == reflect.Ptr {
+		if val.Kind() == reflect.Ptr {
+			ret = call(val, fn)
+		} else {
+			ptr := reflect.New(val.Type())
+			ptr.Elem().Set(val)
+			ret = call(ptr, fn)
+		}
+	} else if val.Kind() == reflect.Ptr {
+		ret = call(val.Elem(), fn)
 	} else {
-		fmt.Fprintln(stderr, err.Error())
+		ret = call(val, fn)
 	}
-	if ret == nil || *ret == nil {
-		*ret = errors.New("")
+	if len(ret) > 0 {
+		if errv := ret[0]; !errv.IsNil() {
+			return errv.Interface().(error)
+		}
 	}
+	return
+}
+
+func call(rcvr reflect.Value, fn reflect.Method) []reflect.Value {
+	t := fn.Type
+	in := make([]reflect.Value, t.NumIn())
+	for i := range t.NumIn() {
+		if i == 0 {
+			in[i] = rcvr
+		} else {
+			in[i] = reflect.Zero(t.In(i))
+		}
+	}
+	return fn.Func.Call(in)
+}
+
+func methods(t reflect.Type) (methods []reflect.Method) {
+	var ptr reflect.Type
+	if t.Kind() == reflect.Pointer {
+		ptr = t
+	} else {
+		ptr = reflect.PointerTo(t)
+	}
+	for i := range ptr.NumMethod() {
+		method := ptr.Method(i)
+		methods = append(methods, method)
+	}
+	return
 }
 
 func methodNames(t reflect.Type) (methods []string) {
@@ -167,4 +228,34 @@ func methodsByName(t reflect.Type, name string) (methods []reflect.Method) {
 		}
 	}
 	return
+}
+
+func signature(m reflect.Method) string {
+	t := m.Type
+	var buf strings.Builder
+	buf.WriteString("func (")
+	for i := 0; i < t.NumIn(); i++ {
+		if i > 0 {
+			buf.WriteString(", ")
+		}
+		buf.WriteString(t.In(i).String())
+	}
+	buf.WriteString(")")
+	if t.NumOut() > 0 {
+		if t.NumOut() > 1 {
+			buf.WriteString(" (")
+		} else {
+			buf.WriteString(" ")
+		}
+		for i := 0; i < t.NumOut(); i++ {
+			if i > 0 {
+				buf.WriteString(", ")
+			}
+			buf.WriteString(t.Out(i).String())
+		}
+		if t.NumOut() > 1 {
+			buf.WriteString(")")
+		}
+	}
+	return buf.String()
 }

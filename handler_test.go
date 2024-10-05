@@ -3,7 +3,6 @@ package ops
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"reflect"
@@ -13,82 +12,159 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-type TestHandler int
+type FuncHandler func() error
 
-func (o *TestHandler) Incr() { *o++ }
-func (o TestHandler) Fail()  { panic(errors.New("fail")) }
-
-type PrintableError struct{ error }
-
-func (p PrintableError) Print(w io.Writer) {
-	fmt.Fprintln(w, "---")
-	fmt.Fprintln(w, p.Error())
-	fmt.Fprintln(w, "---")
-}
-
-func (o TestHandler) PrintableFail() {
-	panic(PrintableError{errors.New("fail")})
-}
+func (h FuncHandler) Panic()       { _ = h() }
+func (h FuncHandler) Error() error { return h() }
 
 func TestHandleSuccess(t *testing.T) {
 	var code *int
+	n := new(int)
 	swap(t, &exit, func(exitcode int) { code = &exitcode })
-	swap(t, &os.Args, []string{"", "incr"})
+	swap(t, &os.Args, []string{"", "error"})
 	errbuf := new(bytes.Buffer)
 	swap[io.Writer](t, &stderr, errbuf)
-	counter := new(TestHandler)
+	handler := FuncHandler(func() error { *n++; return nil })
 
-	Handle(counter)
+	Handle(handler)
 
-	if got, want := int(*counter), 1; got != want {
-		t.Errorf("got %d TestHandler.Incr() calls, want %d", got, want)
+	if got, want := *n, 1; got != want {
+		t.Errorf("got %d FuncHandler.Error() calls, want %d", got, want)
 	}
 	if code == nil {
-		t.Errorf("TestHandler fail op: did not call exit()")
+		t.Errorf("did not call exit()")
 	} else if got, want := *code, 0; got != want {
-		t.Errorf("TestHandler fail op: got exit(%d), want exit(%d)", got, want)
+		t.Errorf("called exit(%d), want exit(%d)", got, want)
 	}
 	if got, want := errbuf.String(), ""; got != want {
 		t.Errorf("stderr = %q, want %q", got, want)
 	}
 }
 
-func TestHandleFailure(t *testing.T) {
+func TestHandlePanic(t *testing.T) {
 	var code *int
 	swap(t, &exit, func(exitcode int) { code = &exitcode })
-	swap(t, &os.Args, []string{"", "fail"})
+	swap(t, &os.Args, []string{"", "panic"})
 	errbuf := new(bytes.Buffer)
 	swap[io.Writer](t, &stderr, errbuf)
-	counter := new(TestHandler)
+	handler := FuncHandler(func() error { panic("fail") })
 
-	Handle(counter)
+	Handle(handler)
 
 	if code == nil {
-		t.Errorf("TestHandler fail op: did not call exit()")
+		t.Errorf("exit() not called")
 	} else if got, want := *code, 1; got != want {
-		t.Errorf("TestHandler fail op: got exit(%d), want exit(%d)", got, want)
+		t.Errorf("called exit(%d), want exit(%d)", got, want)
 	}
 	if got, want := errbuf.String(), "fail\n"; got != want {
 		t.Errorf("stderr = %q, want %q", got, want)
 	}
 }
 
-func TestHandlePrintable(t *testing.T) {
+func TestHandleError(t *testing.T) {
 	var code *int
 	swap(t, &exit, func(exitcode int) { code = &exitcode })
-	swap(t, &os.Args, []string{"", "printable_fail"})
+	swap(t, &os.Args, []string{"", "error"})
 	errbuf := new(bytes.Buffer)
 	swap[io.Writer](t, &stderr, errbuf)
-	counter := new(TestHandler)
+	handler := FuncHandler(func() error { return errors.New("fail") })
 
-	Handle(counter)
+	Handle(handler)
 
 	if code == nil {
-		t.Errorf("TestHandler fail op: did not call exit()")
+		t.Errorf("exit() not called")
 	} else if got, want := *code, 1; got != want {
-		t.Errorf("TestHandler fail op: got exit(%d), want exit(%d)", got, want)
+		t.Errorf("called exit(%d), want exit(%d)", got, want)
 	}
-	if got, want := errbuf.String(), "---\nfail\n---\n"; got != want {
+	if got, want := errbuf.String(), "fail\n"; got != want {
+		t.Errorf("stderr = %q, want %q", got, want)
+	}
+}
+
+func TestPassPanic(t *testing.T) {
+	var code *int
+	swap(t, &exit, func(exitcode int) { code = &exitcode })
+	swap(t, &os.Args, []string{"", "error"})
+	errbuf := new(bytes.Buffer)
+	swap[io.Writer](t, &stderr, errbuf)
+	handler := FuncHandler(func() error { panic("fail") })
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Error("recover() = <nil>, want string")
+		} else if s, ok := r.(string); !ok {
+			t.Errorf("recover() = %T, want string", r)
+		} else if got, want := s, "fail"; got != want {
+			t.Errorf("recover() = %q, want %q", got, want)
+		}
+		if code == nil {
+			t.Errorf("exit() not called")
+		} else if got, want := *code, 0; got != want {
+			t.Errorf("called exit(%d), want exit(%d)", got, want)
+		}
+		if got, want := errbuf.String(), ""; got != want {
+			t.Errorf("stderr = %q, want %q", got, want)
+		}
+	}()
+
+	Handle(handler)
+}
+
+type BadHandler struct{}
+
+func (BadHandler) TooManyReturns() (error, int) {
+	return nil, 0
+}
+
+func TestInvalidMethod(t *testing.T) {
+	var code *int
+	swap(t, &exit, func(exitcode int) { code = &exitcode })
+	// Validation of all op funcs occurs before running an op.
+	// It should not matter that this test targets a nonexistent op.
+	swap(t, &os.Args, []string{"", "anyop"})
+	errbuf := new(bytes.Buffer)
+	swap[io.Writer](t, &stderr, errbuf)
+
+	Handle(new(BadHandler))
+
+	if code == nil {
+		t.Errorf("exit() not called")
+	} else if got, want := *code, 1; got != want {
+		t.Errorf("called exit(%d), want exit(%d)", got, want)
+	}
+	wanterr := "bad op: bad signature: func (*ops.BadHandler) (error, int)\n"
+	if got, want := errbuf.String(), wanterr; got != want {
+		t.Errorf("stderr = %q, want %q", got, want)
+	}
+}
+
+type ParamHandler func(int, string)
+
+func (h ParamHandler) TakesParameters(i int, s string) { h(i, s) }
+
+func TestHandlerWithParameters(t *testing.T) {
+	var code *int
+	swap(t, &exit, func(exitcode int) { code = &exitcode })
+	swap(t, &os.Args, []string{"", "takes_parameters"})
+	errbuf := new(bytes.Buffer)
+	swap[io.Writer](t, &stderr, errbuf)
+	handler := ParamHandler(func(i int, s string) {
+		if got, want := i, 0; got != want {
+			t.Errorf("ParamHandler i = %d, want %d", got, want)
+		}
+		if got, want := s, ""; got != want {
+			t.Errorf("ParamHandler s = %q, want %q", got, want)
+		}
+	})
+
+	Handle(handler)
+
+	if code == nil {
+		t.Errorf("did not call exit()")
+	} else if got, want := *code, 0; got != want {
+		t.Errorf("called exit(%d), want exit(%d)", got, want)
+	}
+	if got, want := errbuf.String(), ""; got != want {
 		t.Errorf("stderr = %q, want %q", got, want)
 	}
 }
