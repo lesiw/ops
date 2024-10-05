@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	exit  = os.Exit
+	exit  = defers.Exit
 	flags = flag.NewSet(stderr, "op [-l] OPERATION")
 	list  = flags.Bool("l,list", "list available ops and exit")
 
