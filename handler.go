@@ -27,9 +27,9 @@ var (
 )
 
 func Handle(a any) {
-	defer defers.Recover()
 	var code int
 	defer func() { exit(code) }()
+	defer defers.Recover()
 	if err := opHandler(a, os.Args[1:]...); err != nil {
 		if err.Error() != "" {
 			fmt.Fprintln(stderr, err)
