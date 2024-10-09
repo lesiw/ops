@@ -97,10 +97,8 @@ func TestPassPanic(t *testing.T) {
 		} else if got, want := s, "fail"; got != want {
 			t.Errorf("recover() = %q, want %q", got, want)
 		}
-		if code == nil {
-			t.Errorf("exit() not called")
-		} else if got, want := *code, 0; got != want {
-			t.Errorf("called exit(%d), want exit(%d)", got, want)
+		if code != nil {
+			t.Errorf("exit() called")
 		}
 		if got, want := errbuf.String(), ""; got != want {
 			t.Errorf("stderr = %q, want %q", got, want)
