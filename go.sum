@@ -4,5 +4,7 @@ gotest.tools/v3 v3.5.1 h1:EENdUnS3pdur5nybKYIh2Vfgc8IUNBjxDPSjtiJcOzU=
 gotest.tools/v3 v3.5.1/go.mod h1:isy3WKz7GK6uNw/sbHzfKBLvlvXwUyV06n6brMxxopU=
 lesiw.io/defers v0.8.0 h1:Z9PIdf9DRr4DNxTz3SGAjIIk/RbSLDb3svNRvHNtgE0=
 lesiw.io/defers v0.8.0/go.mod h1:AP09yGFHxL5vmTVJxkPL33N1hWI4OzHwTEOzilbDZU4=
+lesiw.io/defers v0.9.0 h1:Sg7RYbhxfHhXMHclO65MJ4oRbyhfSBSeHQw4YjLr6n0=
+lesiw.io/defers v0.9.0/go.mod h1:AP09yGFHxL5vmTVJxkPL33N1hWI4OzHwTEOzilbDZU4=
 lesiw.io/flag v0.7.0 h1:+8rTdoplDMBhOSKok5eKP6ZuLLPTodkDABRY7jfX5JU=
 lesiw.io/flag v0.7.0/go.mod h1:bJx6Hir8MAXkNiO6BbrvhwZuaJF4rQWthQ7pc1DlWZY=

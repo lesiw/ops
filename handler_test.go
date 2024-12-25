@@ -31,10 +31,8 @@ func TestHandleSuccess(t *testing.T) {
 	if got, want := *n, 1; got != want {
 		t.Errorf("got %d FuncHandler.Error() calls, want %d", got, want)
 	}
-	if code == nil {
-		t.Errorf("did not call exit()")
-	} else if got, want := *code, 0; got != want {
-		t.Errorf("called exit(%d), want exit(%d)", got, want)
+	if code != nil {
+		t.Errorf("wanted no exit() calls, got exit(%d)", code)
 	}
 	if got, want := errbuf.String(), ""; got != want {
 		t.Errorf("stderr = %q, want %q", got, want)
@@ -157,10 +155,8 @@ func TestHandlerWithParameters(t *testing.T) {
 
 	Handle(handler)
 
-	if code == nil {
-		t.Errorf("did not call exit()")
-	} else if got, want := *code, 0; got != want {
-		t.Errorf("called exit(%d), want exit(%d)", got, want)
+	if code != nil {
+		t.Errorf("wanted no exit() calls, got exit(%d)", code)
 	}
 	if got, want := errbuf.String(), ""; got != want {
 		t.Errorf("stderr = %q, want %q", got, want)

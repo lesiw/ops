@@ -27,14 +27,12 @@ var (
 )
 
 func Handle(a any) {
-	defer defers.Recover()
+	defer defers.Run()
 	if err := opHandler(a, os.Args[1:]...); err != nil {
 		if err.Error() != "" {
 			fmt.Fprintln(stderr, err)
 		}
 		exit(1)
-	} else {
-		exit(0)
 	}
 }
 
