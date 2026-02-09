@@ -2,6 +2,7 @@ package ops
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -351,6 +352,47 @@ func TestCallPointerReceiverWithNonPointer(t *testing.T) {
 		t.Errorf(`opHandler(s, "ptr_fn") = %q, want <nil>`, err)
 	}
 }
+
+type CtxHandler struct{ ctx context.Context }
+
+func (h *CtxHandler) Run(ctx context.Context) error {
+	h.ctx = ctx
+	return nil
+}
+
+func TestContextHandler(t *testing.T) {
+	h := CtxHandler{}
+
+	err := opHandler(&h, "run")
+
+	if err != nil {
+		t.Errorf(`opHandler(&h, "run") = %q, want <nil>`, err)
+	}
+	if h.ctx == nil {
+		t.Error("ctx is nil, want non-nil")
+	}
+}
+
+func TestContextAfterFunc(t *testing.T) {
+	done := make(chan struct{})
+	h := CtxAfterFuncHandler(func(ctx context.Context) error {
+		context.AfterFunc(ctx, func() {
+			close(done)
+		})
+		return nil
+	})
+
+	err := opHandler(&h, "run")
+
+	if err != nil {
+		t.Errorf(`opHandler(&h, "run") = %q, want <nil>`, err)
+	}
+	<-done
+}
+
+type CtxAfterFuncHandler func(context.Context) error
+
+func (h CtxAfterFuncHandler) Run(ctx context.Context) error { return h(ctx) }
 
 func methodname(m reflect.Method) string {
 	return m.Func.Type().In(0).Elem().Name() + "." + m.Name

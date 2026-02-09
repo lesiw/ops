@@ -4,6 +4,7 @@
 package ops
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -15,6 +16,8 @@ import (
 	"lesiw.io/defers"
 	"lesiw.io/flag"
 )
+
+var contextType = reflect.TypeOf((*context.Context)(nil)).Elem()
 
 var (
 	exit  = defers.Exit
@@ -65,10 +68,12 @@ func opHandler(a any, args ...string) (err error) {
 			return err
 		}
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	val := reflect.ValueOf(a)
 	var ran bool
 	for _, method := range methodsByName(t, args[0]) {
-		if err := exec(val, method); err != nil {
+		if err := exec(ctx, val, method); err != nil {
 			return err
 		}
 		ran = true
@@ -93,7 +98,7 @@ func validate(fn reflect.Method) error {
 	return nil
 }
 
-func exec(val reflect.Value, fn reflect.Method) (err error) {
+func exec(ctx context.Context, val reflect.Value, fn reflect.Method) (err error) {
 	var catch bool
 	defer func() {
 		if !catch {
@@ -120,16 +125,16 @@ func exec(val reflect.Value, fn reflect.Method) (err error) {
 	var ret []reflect.Value
 	if typ.In(0).Kind() == reflect.Ptr {
 		if val.Kind() == reflect.Ptr {
-			ret = call(val, fn)
+			ret = call(ctx, val, fn)
 		} else {
 			ptr := reflect.New(val.Type())
 			ptr.Elem().Set(val)
-			ret = call(ptr, fn)
+			ret = call(ctx, ptr, fn)
 		}
 	} else if val.Kind() == reflect.Ptr {
-		ret = call(val.Elem(), fn)
+		ret = call(ctx, val.Elem(), fn)
 	} else {
-		ret = call(val, fn)
+		ret = call(ctx, val, fn)
 	}
 	if len(ret) > 0 {
 		if errv := ret[0]; !errv.IsNil() {
@@ -139,12 +144,14 @@ func exec(val reflect.Value, fn reflect.Method) (err error) {
 	return
 }
 
-func call(rcvr reflect.Value, fn reflect.Method) []reflect.Value {
+func call(ctx context.Context, rcvr reflect.Value, fn reflect.Method) []reflect.Value {
 	t := fn.Type
 	in := make([]reflect.Value, t.NumIn())
 	for i := range t.NumIn() {
 		if i == 0 {
 			in[i] = rcvr
+		} else if i == 1 && t.In(i) == contextType {
+			in[i] = reflect.ValueOf(ctx)
 		} else {
 			in[i] = reflect.Zero(t.In(i))
 		}

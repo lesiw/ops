@@ -9,12 +9,21 @@ Add a file to `.ops/main.go`, for example:
 ```go
 package main
 
-import "lesiw.io/ops"
+import (
+    "context"
+    "fmt"
+
+    "lesiw.io/ops"
+)
 
 type Ops struct{}
 
-func main()        { ops.Handle(Ops{}) }
-func (Ops) Hello() { println("Hello world!") }
+func main() { ops.Handle(Ops{}) }
+
+func (Ops) Hello(ctx context.Context) error {
+    fmt.Println("Hello world!")
+    return nil
+}
 ```
 
 Then use `op` to run it.
@@ -27,11 +36,32 @@ op hello                      # => Hello world!
 
 You can also play with a basic example on the [Go playground][play].
 
-## Error handling
+The context provided by the framework is canceled after the op completes,
+making `context.AfterFunc` a natural way to register cleanup:
 
-Op functions can be of type `func()` or `func() error`. If a `func()` op panics,
-that panic will be printed as if it were an error. If a `func() error` op
-panics, it is treated as a true panic and will print a stacktrace.
+```go
+func (o Ops) Deploy(ctx context.Context) error {
+    env, err := createEnvironment()
+    if err != nil {
+        return err
+    }
+    context.AfterFunc(ctx, func() {
+        env.Cleanup()
+    })
+    return runTests(env)
+}
+```
+
+Ops can call each other directly:
+
+```go
+func (o Ops) All(ctx context.Context) error {
+    if err := o.Build(ctx); err != nil {
+        return err
+    }
+    return o.Test(ctx)
+}
+```
 
 ## Post handler functions
 
@@ -49,5 +79,5 @@ multiple methods with the same name at the same depth will be run sequentially
 in the same order as their embedded types.
 
 [go]: https://go.dev/doc/install
-[play]: https://go.dev/play/p/YcUCt5RLoPR
+[play]: https://go.dev/play/p/Ff4ZL0rh3Nc
 [selectors]: https://go.dev/ref/spec#Selectors
